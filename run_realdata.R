@@ -1,6 +1,6 @@
 # ===========================================================================
 # Real-data application: compare all eight estimators on two benchmark sets
-#   - gasoline (NIR spectroscopy, p > n)
+#   - cookie   (NIR spectroscopy, p > n)
 #   - diabetes (lars)
 # via repeated random train/test splits. Reports out-of-sample MSPE and the
 # average number of selected variables.
@@ -18,10 +18,18 @@ source("R/realdata.R")
 args     <- commandArgs(trailingOnly = TRUE)
 nsplits  <- if (length(args) >= 1) as.integer(args[1]) else 100L
 
-datasets <- c("gasoline", "diabetes")
+datasets <- c("cookie", "diabetes")
+# For the high-dimensional cookie data (p > n) drop the lambda2 = 0 grid point:
+# it is ill-conditioned and makes the coordinate descent crawl to maxit.
+grid <- list(
+  cookie   = list(l2seq = c(0.01, 0.1, 1), kapseq = c(0.3, 0.6, 0.9)),
+  diabetes = list(l2seq = c(0, 0.01, 0.1, 1), kapseq = c(0.3, 0.6, 0.9))
+)
+
 summ <- list(); raw <- list()
 for (ds in datasets) {
-  res <- run_realdata(ds, nsplits = nsplits)
+  g <- grid[[ds]]
+  res <- run_realdata(ds, nsplits = nsplits, l2seq = g$l2seq, kapseq = g$kapseq)
   message(sprintf("[%s]  n=%d, p=%d, splits=%d",
                   res$meta$name, res$meta$n, res$meta$p, nsplits))
   summ[[ds]] <- res$summary

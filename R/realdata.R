@@ -2,8 +2,8 @@
 # Real-data analysis. The same eight estimators are compared on two benchmark
 # data sets by repeated random train/test splits:
 #
-#   * gasoline  (NIR spectroscopy)  : n = 60,  p = 401  -> octane number
-#                                     (R package 'pls'; high-dimensional, p > n)
+#   * cookie    (NIR spectroscopy)  : n = 72,  p = 700  -> fat content
+#                                     (R package 'ppls'; high-dimensional, p > n)
 #   * diabetes  (lars)              : n = 442, p = 10    -> disease progression
 #                                     (R package 'lars')
 #
@@ -13,15 +13,18 @@
 # Tuning is done on the TRAINING fold only (BIC for all; Ad-GO also via CV).
 # ---------------------------------------------------------------------------
 
-#' Load a benchmark data set as list(X, y, name). 'which' in c("gasoline","diabetes").
-load_dataset <- function(which = c("gasoline", "diabetes")) {
+#' Load a benchmark data set as list(X, y, name). 'which' in c("cookie","diabetes").
+#' @param response  for "cookie", which constituent to model
+#'   (one of "fat","sucrose","dry_flour","water"; default "fat").
+load_dataset <- function(which = c("cookie", "diabetes"), response = "fat") {
   which <- match.arg(which)
-  if (which == "gasoline") {
-    if (!requireNamespace("pls", quietly = TRUE))
-      stop("Install the 'pls' package for the gasoline NIR data.")
-    data("gasoline", package = "pls", envir = environment())
-    g <- get("gasoline", envir = environment())
-    list(X = unclass(g$NIR), y = as.numeric(g$octane), name = "gasoline (NIR)")
+  if (which == "cookie") {
+    if (!requireNamespace("ppls", quietly = TRUE))
+      stop("Install the 'ppls' package for the cookie NIR data.")
+    data("cookie", package = "ppls", envir = environment())
+    ck <- get("cookie", envir = environment())          # list(NIR, constituents)
+    list(X = as.matrix(ck$NIR), y = as.numeric(ck$constituents[[response]]),
+         name = sprintf("cookie NIR (%s)", response))
   } else {
     if (!requireNamespace("lars", quietly = TRUE))
       stop("Install the 'lars' package for the diabetes data.")

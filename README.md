@@ -70,7 +70,7 @@ R/
 └── realdata.R       dataset loaders, train/test split evaluation (MSPE, model size)
 
 run_simulation.R     Tables 6.1 / 6.2   (Scenario 1 & 2)
-run_realdata.R       real-data application (gasoline NIR + diabetes)
+run_realdata.R       real-data application (cookie NIR + diabetes)
 run_timing.R         Table 6.4           (computation time vs p)
 make_boxplots.R      MSE boxplots        (Figures Boxplot1 / Boxplot2)
 tests/test_ago.R     self-checks for the coordinate-descent core
@@ -113,8 +113,10 @@ The eight estimators are compared on two benchmark datasets via repeated random 
 
 | Dataset | Source (R pkg) | `n` | `p` | Response |
 |---------|----------------|:---:|:---:|----------|
-| **gasoline** (NIR spectroscopy) | `pls` | 60 | 401 | octane number |
+| **cookie** (NIR spectroscopy) | `ppls` | 72 | 700 | fat content |
 | **diabetes** | `lars` | 442 | 10 | disease progression |
+
+> The cookie dough data carries four constituents (fat, sucrose, dry flour, water); `load_dataset("cookie", response=)` selects which one to model (default `"fat"`).
 
 ```bash
 Rscript run_realdata.R          # 100 splits, 70/30 train/test  ->  results/realdata_summary.csv
