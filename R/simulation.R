@@ -46,11 +46,14 @@ selection_counts <- function(bhat, beta, tol = 1e-8) {
   c(CZ = sum(est_zero & true_zero), IZ = sum(est_zero & !true_zero))
 }
 
-METHODS <- c("Lasso", "Enet", "Ad-Lasso", "Ad-Enet", "SCAD",
-             "GO", "Ad-GO (BIC)", "Ad-GO (CV)")
+# Every estimator is tuned by BOTH BIC and cross-validation.
+BASE_METHODS <- c("Lasso", "Enet", "Ad-Lasso", "Ad-Enet", "SCAD", "GO", "Ad-GO")
+METHODS <- as.vector(t(outer(BASE_METHODS, c("BIC", "CV"),
+                             function(m, c) sprintf("%s (%s)", m, c))))
 
-#' Fit all eight estimators on a standardised design Xs and centred response yc.
-#' Returns a named list of coefficient vectors on the STANDARDISED scale.
+#' Fit every estimator on a standardised design Xs and centred response yc,
+#' under BOTH tuning criteria (BIC and K-fold CV). Returns a named list of
+#' coefficient vectors on the STANDARDISED scale (names = METHODS).
 #' Shared by the simulation (fit_all) and the real-data analysis.
 #' enet_alpha: ElasticNet mixing parameter (configurable; default 0.5).
 fit_methods_std <- function(Xs, yc, enet_alpha = 0.5, gamma = 1,
@@ -59,14 +62,20 @@ fit_methods_std <- function(Xs, yc, enet_alpha = 0.5, gamma = 1,
   w_ad  <- adaptive_weights(init_coef(Xs, yc), gamma)
   w_one <- rep(1, ncol(Xs))
   list(
-    "Lasso"       = fit_glmnet_bic(Xs, yc, alpha = 1),
-    "Enet"        = fit_glmnet_bic(Xs, yc, alpha = enet_alpha),
-    "Ad-Lasso"    = fit_glmnet_bic(Xs, yc, alpha = 1,          penalty.factor = w_ad),
-    "Ad-Enet"     = fit_glmnet_bic(Xs, yc, alpha = enet_alpha, penalty.factor = w_ad),
-    "SCAD"        = fit_scad_bic(Xs, yc),
-    "GO"          = ago_bic(Xs, yc, w_one, l2seq, kapseq, nl1, tol, maxit),
-    "Ad-GO (BIC)" = ago_bic(Xs, yc, w_ad,  l2seq, kapseq, nl1, tol, maxit),
-    "Ad-GO (CV)"  = ago_cv (Xs, yc, w_ad,  l2seq, kapseq, nl1, nfolds, tol, maxit)
+    "Lasso (BIC)"    = fit_glmnet_bic(Xs, yc, alpha = 1),
+    "Lasso (CV)"     = fit_glmnet_cv (Xs, yc, alpha = 1,          nfolds = nfolds),
+    "Enet (BIC)"     = fit_glmnet_bic(Xs, yc, alpha = enet_alpha),
+    "Enet (CV)"      = fit_glmnet_cv (Xs, yc, alpha = enet_alpha, nfolds = nfolds),
+    "Ad-Lasso (BIC)" = fit_glmnet_bic(Xs, yc, alpha = 1,          penalty.factor = w_ad),
+    "Ad-Lasso (CV)"  = fit_glmnet_cv (Xs, yc, alpha = 1,          penalty.factor = w_ad, nfolds = nfolds),
+    "Ad-Enet (BIC)"  = fit_glmnet_bic(Xs, yc, alpha = enet_alpha, penalty.factor = w_ad),
+    "Ad-Enet (CV)"   = fit_glmnet_cv (Xs, yc, alpha = enet_alpha, penalty.factor = w_ad, nfolds = nfolds),
+    "SCAD (BIC)"     = fit_scad_bic(Xs, yc),
+    "SCAD (CV)"      = fit_scad_cv (Xs, yc, nfolds = nfolds),
+    "GO (BIC)"       = ago_bic(Xs, yc, w_one, l2seq, kapseq, nl1, tol, maxit),
+    "GO (CV)"        = ago_cv (Xs, yc, w_one, l2seq, kapseq, nl1, nfolds, tol, maxit),
+    "Ad-GO (BIC)"    = ago_bic(Xs, yc, w_ad,  l2seq, kapseq, nl1, tol, maxit),
+    "Ad-GO (CV)"     = ago_cv (Xs, yc, w_ad,  l2seq, kapseq, nl1, nfolds, tol, maxit)
   )
 }
 

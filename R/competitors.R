@@ -50,8 +50,22 @@ fit_glmnet_bic <- function(Xs, yc, alpha, penalty.factor = rep(1, ncol(Xs))) {
   bic_pick(as.matrix(fit$beta), Xs, yc)
 }
 
+#' glmnet path tuned by K-fold CV (lambda.min). Same model, CV instead of BIC.
+fit_glmnet_cv <- function(Xs, yc, alpha, penalty.factor = rep(1, ncol(Xs)),
+                          nfolds = 5L) {
+  cvf <- cv.glmnet(Xs, yc, alpha = alpha, standardize = FALSE, intercept = FALSE,
+                   penalty.factor = penalty.factor, nfolds = nfolds)
+  as.numeric(coef(cvf, s = "lambda.min"))[-1]    # drop (zero) intercept
+}
+
 fit_scad_bic <- function(Xs, yc) {
   fit <- ncvreg(Xs, yc, penalty = "SCAD")
   B <- as.matrix(fit$beta)[-1, , drop = FALSE]   # drop intercept row
   bic_pick(B, Xs, yc)
+}
+
+#' SCAD path tuned by K-fold CV (lambda.min).
+fit_scad_cv <- function(Xs, yc, nfolds = 5L) {
+  cvf <- cv.ncvreg(Xs, yc, penalty = "SCAD", nfolds = nfolds)
+  as.numeric(coef(cvf))[-1]                       # at CV-optimal lambda, drop intercept
 }

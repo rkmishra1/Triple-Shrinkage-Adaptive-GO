@@ -50,15 +50,19 @@ where `b_lsⱼ` is the univariate LS coefficient of the partial residual on colu
 
 | Method | Implementation | Tuning |
 |--------|----------------|:------:|
-| Lasso | `glmnet` (α = 1) | BIC |
-| ElasticNet | `glmnet` (α = 0.5) | BIC |
-| Adaptive Lasso | `glmnet` + penalty weights | BIC |
-| Adaptive ElasticNet | `glmnet` + penalty weights | BIC |
-| SCAD | `ncvreg` | BIC |
-| GO | coordinate descent | BIC |
-| **Ad-GO** | **coordinate descent** | **BIC *and* CV** |
+| Lasso | `glmnet` (α = 1) | BIC & CV |
+| ElasticNet | `glmnet` (α = 0.5) | BIC & CV |
+| Adaptive Lasso | `glmnet` + penalty weights | BIC & CV |
+| Adaptive ElasticNet | `glmnet` + penalty weights | BIC & CV |
+| SCAD | `ncvreg` | BIC & CV |
+| GO | coordinate descent | BIC & CV |
+| **Ad-GO** | **coordinate descent** | **BIC & CV** |
 
-All estimators are fitted on the same standardized design and converted back to the original scale before evaluation.
+**Every** estimator is tuned by *both* BIC and K-fold cross-validation, giving 14
+fitted models (`<Method> (BIC)` / `<Method> (CV)`). All are fitted on the same
+standardized design and converted back to the original scale before evaluation.
+glmnet/SCAD use `cv.glmnet`/`cv.ncvreg` (`lambda.min`); GO/Ad-GO use `ago_cv`
+over the `(λ₁, λ₂, κ)` grid.
 
 ## 🗂️ Repository layout
 
@@ -133,7 +137,9 @@ The selection criterion is the standard regression BIC
 BIC = n·log(RSS/n) + log(n)·df,        df = number of nonzero coefficients
 ```
 
-(Wang et al. 2007) — the operational form of manuscript **Eq. (5.5)**. Written literally as `log(RSS) + log(n)·df` (without the `n` factor) the df penalty dominates the fit term and the null model is always selected, so the conventional `n`-scaled version is used; it gives the same ranking with sensible selection. Ad-GO additionally supports **K-fold cross-validation** (`ago_cv`) over the same `(λ₁, λ₂, κ)` grid.
+(Wang et al. 2007) — the operational form of manuscript **Eq. (5.5)**. Written literally as `log(RSS) + log(n)·df` (without the `n` factor) the df penalty dominates the fit term and the null model is always selected, so the conventional `n`-scaled version is used; it gives the same ranking with sensible selection.
+
+Each method is **also** tuned by **K-fold cross-validation**: `cv.glmnet` / `cv.ncvreg` (at `lambda.min`) for the glmnet/SCAD methods, and `ago_cv` over the `(λ₁, λ₂, κ)` grid for GO/Ad-GO. As expected, BIC yields sparser fits (higher CZ) and CV yields lower prediction error.
 
 ## 🔧 Reproducibility & knobs
 
