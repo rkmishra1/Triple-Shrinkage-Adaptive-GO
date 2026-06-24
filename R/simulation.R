@@ -23,11 +23,13 @@ generate_data <- function(n, p, rho, sigma = 6) {
 }
 
 #' Centre y and standardise X columns so that (1/n) sum_i x_ij^2 = 1.
+#' Returns the column centres and y-mean too, for out-of-sample prediction.
 standardize <- function(X, y) {
   cx <- colMeans(X)
   Xc <- sweep(X, 2, cx, "-")
   sx <- sqrt(colMeans(Xc^2)); sx[sx == 0] <- 1
-  list(Xs = sweep(Xc, 2, sx, "/"), yc = y - mean(y), scale = sx)
+  list(Xs = sweep(Xc, 2, sx, "/"), yc = y - mean(y),
+       scale = sx, center = cx, ybar = mean(y))
 }
 
 #' MSE = (bhat - beta*)' Sigma (bhat - beta*).  bhat on ORIGINAL scale.
@@ -47,20 +49,16 @@ selection_counts <- function(bhat, beta, tol = 1e-8) {
 METHODS <- c("Lasso", "Enet", "Ad-Lasso", "Ad-Enet", "SCAD",
              "GO", "Ad-GO (BIC)", "Ad-GO (CV)")
 
-#' Fit every estimator on one data set; return a data.frame of (CZ, IZ, MSE).
+#' Fit all eight estimators on a standardised design Xs and centred response yc.
+#' Returns a named list of coefficient vectors on the STANDARDISED scale.
+#' Shared by the simulation (fit_all) and the real-data analysis.
 #' enet_alpha: ElasticNet mixing parameter (configurable; default 0.5).
-fit_all <- function(dat, enet_alpha = 0.5, gamma = 1,
-                    l2seq = c(0, 0.01, 0.1, 1), kapseq = c(0.3, 0.6, 0.9),
-                    nl1 = 25L, nfolds = 5L, tol = 1e-7, maxit = 1000L) {
-  st <- standardize(dat$X, dat$y)
-  Xs <- st$Xs; yc <- st$yc; sc <- st$scale
-  to_orig <- function(b_std) b_std / sc          # original-scale coefficients
-
-  b_init <- init_coef(Xs, yc)
-  w_ad   <- adaptive_weights(b_init, gamma)
-  w_one  <- rep(1, ncol(Xs))
-
-  fits <- list(
+fit_methods_std <- function(Xs, yc, enet_alpha = 0.5, gamma = 1,
+                            l2seq = c(0, 0.01, 0.1, 1), kapseq = c(0.3, 0.6, 0.9),
+                            nl1 = 25L, nfolds = 5L, tol = 1e-7, maxit = 1000L) {
+  w_ad  <- adaptive_weights(init_coef(Xs, yc), gamma)
+  w_one <- rep(1, ncol(Xs))
+  list(
     "Lasso"       = fit_glmnet_bic(Xs, yc, alpha = 1),
     "Enet"        = fit_glmnet_bic(Xs, yc, alpha = enet_alpha),
     "Ad-Lasso"    = fit_glmnet_bic(Xs, yc, alpha = 1,          penalty.factor = w_ad),
@@ -70,9 +68,14 @@ fit_all <- function(dat, enet_alpha = 0.5, gamma = 1,
     "Ad-GO (BIC)" = ago_bic(Xs, yc, w_ad,  l2seq, kapseq, nl1, tol, maxit),
     "Ad-GO (CV)"  = ago_cv (Xs, yc, w_ad,  l2seq, kapseq, nl1, nfolds, tol, maxit)
   )
+}
 
+#' Fit every estimator on one simulated data set; return (CZ, IZ, MSE).
+fit_all <- function(dat, ...) {
+  st <- standardize(dat$X, dat$y)
+  fits <- fit_methods_std(st$Xs, st$yc, ...)
   do.call(rbind, lapply(METHODS, function(m) {
-    bhat <- to_orig(fits[[m]])
+    bhat <- fits[[m]] / st$scale                 # back to original scale
     sel  <- selection_counts(bhat, dat$beta)
     data.frame(Method = m, CZ = sel["CZ"], IZ = sel["IZ"],
                MSE = mse_sigma(bhat, dat$beta, dat$Sigma),
