@@ -81,14 +81,35 @@ fit_all <- function(dat, enet_alpha = 0.5, gamma = 1,
 }
 
 #' Run nreps replications for one (n, p, rho) configuration and aggregate.
-run_config <- function(n, p, rho, nreps = 100L, seed = NULL, verbose = TRUE, ...) {
+#'
+#' @param ncores  number of parallel workers. Default uses all but one core
+#'   (1 on Windows, where forking via mclapply is unavailable).
+run_config <- function(n, p, rho, nreps = 100L, seed = NULL, verbose = TRUE,
+                       ncores = NULL, ...) {
   if (!is.null(seed)) set.seed(seed)
-  acc <- vector("list", nreps)
-  for (r in seq_len(nreps)) {
-    dat <- generate_data(n, p, rho)
-    acc[[r]] <- fit_all(dat, ...)
-    if (verbose && r %% 10 == 0)
-      message(sprintf("  n=%d p=%d rho=%.2f : rep %d/%d", n, p, rho, r, nreps))
+  if (is.null(ncores)) {
+    ncores <- if (.Platform$OS.type == "windows") 1L
+              else max(1L, parallel::detectCores() - 1L)
+  }
+  one_rep <- function(r) fit_all(generate_data(n, p, rho), ...)
+
+  if (ncores > 1L) {
+    # Reproducible parallel streams (L'Ecuyer) seeded from the call above.
+    if (!is.null(seed)) { RNGkind("L'Ecuyer-CMRG"); set.seed(seed) }
+    acc <- parallel::mclapply(seq_len(nreps), one_rep,
+                              mc.cores = ncores, mc.set.seed = TRUE)
+    bad <- vapply(acc, inherits, logical(1), what = "try-error")
+    if (any(bad)) stop("fit_all failed in ", sum(bad), " replication(s): ",
+                       conditionMessage(attr(acc[[which(bad)[1]]], "condition")))
+    if (verbose) message(sprintf("  n=%d p=%d rho=%.2f : %d reps on %d cores",
+                                 n, p, rho, nreps, ncores))
+  } else {
+    acc <- vector("list", nreps)
+    for (r in seq_len(nreps)) {
+      acc[[r]] <- one_rep(r)
+      if (verbose && r %% 10 == 0)
+        message(sprintf("  n=%d p=%d rho=%.2f : rep %d/%d", n, p, rho, r, nreps))
+    }
   }
   all <- do.call(rbind, acc)
   agg <- do.call(rbind, lapply(METHODS, function(m) {
