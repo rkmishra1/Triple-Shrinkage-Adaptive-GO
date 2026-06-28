@@ -2,9 +2,9 @@
 
 # Adaptive GO
 
-### Coordinate-Descent Estimation, Simulation Study & Real-Data Application
+### Triple-Shrinkage Penalized Regression via Coordinate Descent
 
-*Reproducible `R` code for the **adaptive Generalized O'Sullivan (Ad-GO)** penalized regression estimator.*
+*Reproducible `R` code for the **adaptive Generalized O'Sullivan (Ad-GO)** estimator.*
 
 [![R](https://img.shields.io/badge/R-%E2%89%A54.0-276DC3?logo=r&logoColor=white)](https://www.r-project.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -14,74 +14,103 @@
 
 ---
 
-The Ad-GO estimator is fitted with a **pathwise coordinate-descent** algorithm and tuned by both **BIC** and **cross-validation**. This repository reproduces the full computational study — the simulation tables, the timing table, the MSE boxplots — and a real-data application on two benchmark datasets.
+The Ad-GO estimator combines **three shrinkage parameters** $(\lambda_1, \lambda_2, \kappa)$ with **adaptive penalty weights** in a pathwise coordinate-descent algorithm, tuned by BIC and cross-validation. This repository reproduces the full simulation study, timing table, MSE boxplots, and a real-data application on two benchmark datasets.
 
-## 📑 Contents
+---
 
-- [The estimator](#-the-estimator)
-- [Methods compared](#-methods-compared)
-- [Repository layout](#-repository-layout)
-- [Quick start](#-quick-start)
-- [Simulation study](#-simulation-study)
-- [Real-data application](#-real-data-application)
-- [Tuning](#-tuning)
-- [Reproducibility & knobs](#-reproducibility--knobs)
+## Fitting Pipeline
 
-## 🧮 The estimator
+<p align="center">
+  <img src="docs/figures/pipeline.png" width="860" alt="Ad-GO fitting pipeline"/>
+  <br><em>Figure 1 — Four-stage Ad-GO pipeline: initial OLS/ridge fit → adaptive weights → BIC/CV grid search over (λ₁, λ₂, κ) → coordinate descent with soft-threshold update (Eq. 5.4)</em>
+</p>
 
-For a standardized design (columns centred, `(1/n) Σ xᵢⱼ² = 1`) the Ad-GO coordinate update is the soft-thresholding rule **(Eq. 5.4)**:
+---
 
-```
-β̂ⱼ = 1/(1+λ₂) · S( (1+κλ₂)·b_lsⱼ , λ₁wⱼ ),     S(z,t) = sign(z)·(|z|−t)₊
-```
+## The Estimator
 
-where `b_lsⱼ` is the univariate LS coefficient of the partial residual on column `j`, the `wⱼ` are adaptive penalty weights, and `(λ₁, λ₂, κ)` are the tuning parameters.
+For a standardized design the Ad-GO coordinate update is the soft-thresholding rule **(Eq. 5.4)**:
+
+$$\hat\beta_j = \frac{1}{1+\lambda_2} \cdot S\!\left((1+\kappa\lambda_2)\,b_j^{\rm ls},\; \lambda_1 w_j\right), \qquad S(z,t) = \operatorname{sign}(z)\cdot(|z|-t)_+$$
+
+where $b_j^{\rm ls}$ is the univariate LS coefficient of the partial residual on column $j$, and $w_j = 1/|\hat\beta_j^{\rm init}|^\gamma$ are adaptive weights.
 
 | Symbol | Role |
 |:------:|------|
-| `λ₁`   | ℓ₁ (sparsity) penalty |
-| `λ₂`   | ridge-type shrinkage toward `κ·b_ls` |
-| `κ`    | shrinkage target multiplier |
-| `wⱼ`   | adaptive weights `1/\|β̂ⱼ^init\|^γ` (γ = 1); `β̂^init` = OLS if `p<n`, ridge otherwise |
+| $\lambda_1$ | $\ell_1$ sparsity penalty |
+| $\lambda_2$ | ridge-type shrinkage toward $\kappa \cdot b^{\rm ls}$ |
+| $\kappa$ | shrinkage target multiplier |
+| $w_j$ | adaptive weights; $\hat\beta^{\rm init}$ = OLS if $p<n$, ridge otherwise |
 
-> Setting `wⱼ ≡ 1` recovers the non-adaptive **GO** estimator.
+> Setting $w_j \equiv 1$ recovers the non-adaptive **GO** estimator.
 
-## ⚖️ Methods compared
+---
+
+## Regularisation Paths
+
+The three panels below illustrate how adding ridge shrinkage ($\lambda_2$) and adaptive weights ($w_j$) progressively improves selection — noise variables zero out faster, signal variables are retained longer.
+
+<p align="center">
+  <img src="docs/figures/reg_paths.png" width="860" alt="Regularisation paths: Lasso, Elastic Net, Ad-GO"/>
+  <br><em>Figure 2 — Left: standard Lasso path. Centre: Elastic Net (ridge adds grouping). Right: Ad-GO with adaptive weights concentrates the L1 penalty on noise variables, producing sparser paths for small coefficients.</em>
+</p>
+
+---
+
+## Triple-Shrinkage Tuning
+
+The three parameters $(\lambda_1, \lambda_2, \kappa)$ are selected jointly over a grid by BIC (or cross-validation). The BIC surface below shows the joint landscape over $(\lambda_1, \lambda_2)$ at a fixed $\kappa$, and the profile over $\kappa$ at the selected $(\lambda_1^*, \lambda_2^*)$.
+
+<p align="center">
+  <img src="docs/figures/tuning_surface.png" width="820" alt="Triple-shrinkage tuning surface"/>
+  <br><em>Figure 3 — Left: BIC surface over (λ₁, λ₂) at κ = 0.6; star marks the selected pair. Right: BIC profile over κ at fixed (λ₁*, λ₂*), showing the optimal κ*.</em>
+</p>
+
+---
+
+## Simulation Results
+
+### Performance — Scenario 2, BIC-tuned ($n=400$, $\rho=0.5$)
+
+<p align="center">
+  <img src="docs/figures/simulation_metrics.png" width="860" alt="Simulation metrics across 7 methods"/>
+  <br><em>Figure 4 — Ad-GO (blue) leads on all three metrics: highest correct zeros (CZ ↑), fewest incorrect zeros (IZ ↓), lowest MSE (↓) against six competing methods.</em>
+</p>
+
+### Design Grid
+
+Data generated from $y = X\beta^* + \varepsilon$, $\varepsilon \sim N(0, 6^2)$, $X \sim N_p(0, \Sigma)$ with $\Sigma_{jk} = \rho^{|j-k|}$. Active set $A = \{1,\ldots,s\}$, $s = 3\lfloor p/9 \rfloor$.
+
+| Scenario | Dimension growth | $p$ at $n = 200, 400, 800$ |
+|:--------:|:----------------:|:--------------------------|
+| **1** | $O(n^{1/2})$ | $\lfloor 4\sqrt{n}\rfloor - 5$ |
+| **2** | $O(n^{2/3})$ | $\lfloor 4n^{2/3}\rfloor - 5$ |
+
+Crossed with $\rho \in \{0, 0.5, 0.75\}$, over 100 replications.
+
+| Metric | Meaning | Direction |
+|--------|---------|:---------:|
+| **CZ** | Correctly identified zeros | ↑ |
+| **IZ** | Active coefficients wrongly zeroed | ↓ |
+| **MSE** | $(\\hat\beta - \beta^*)^\top \Sigma (\hat\beta - \beta^*)$ | ↓ |
+
+---
+
+## Methods Compared
 
 | Method | Implementation | Tuning |
 |--------|----------------|:------:|
 | Lasso | `glmnet` (α = 1) | BIC & CV |
-| ElasticNet | `glmnet` (α = 0.5) | BIC & CV |
+| Elastic Net | `glmnet` (α = 0.5) | BIC & CV |
 | Adaptive Lasso | `glmnet` + penalty weights | BIC & CV |
-| Adaptive ElasticNet | `glmnet` + penalty weights | BIC & CV |
+| Adaptive Elastic Net | `glmnet` + penalty weights | BIC & CV |
 | SCAD | `ncvreg` | BIC & CV |
 | GO | coordinate descent | BIC & CV |
 | **Ad-GO** | **coordinate descent** | **BIC & CV** |
 
-**Every** estimator is tuned by *both* BIC and K-fold cross-validation, giving 14
-fitted models (`<Method> (BIC)` / `<Method> (CV)`). All are fitted on the same
-standardized design and converted back to the original scale before evaluation.
-glmnet/SCAD use `cv.glmnet`/`cv.ncvreg` (`lambda.min`); GO/Ad-GO use `ago_cv`
-over the `(λ₁, λ₂, κ)` grid.
+---
 
-## 🗂️ Repository layout
-
-```
-R/
-├── adaptive_go.R    coordinate descent, λ-path, BIC & CV tuning for Ad-GO / GO
-├── competitors.R    glmnet / ncvreg wrappers, BIC path selection, adaptive weights
-├── simulation.R     data generation, standardization, (CZ, IZ, MSE), shared fit core
-└── realdata.R       dataset loaders, train/test split evaluation (MSPE, model size)
-
-run_simulation.R     Tables 6.1 / 6.2   (Scenario 1 & 2)
-run_realdata.R       real-data application (cookie NIR + diabetes)
-run_timing.R         Table 6.4           (computation time vs p)
-make_boxplots.R      MSE boxplots        (Figures Boxplot1 / Boxplot2)
-tests/test_ago.R     self-checks for the coordinate-descent core
-install_deps.R       installs glmnet, ncvreg, pls, lars
-```
-
-## 🚀 Quick start
+## Quick Start
 
 ```bash
 Rscript install_deps.R          # one-time: glmnet, ncvreg, pls, lars
@@ -96,67 +125,54 @@ Rscript tests/test_ago.R        # sanity-check the estimator (fast)
 | MSE boxplots (Scenario 1) | `Rscript make_boxplots.R 1` |
 | Timing table | `Rscript run_timing.R` |
 
-All outputs are written to `results/` (git-ignored).
+All outputs written to `results/` (git-ignored).
 
-## 🔬 Simulation study
+---
 
-Data are generated from `y = Xβ* + ε`, `ε ~ N(0, 6²)`, `X ~ Nₚ(0, Σ)` with `Σⱼₖ = ρ^|j−k|`. The active set is `A = {1,…,s}`, `s = 3⌊p/9⌋`; for `j ∈ A`, `β*ⱼ = ξⱼuⱼ` with `uⱼ ~ Unif(1,3)` and `ξⱼ` a Rademacher sign.
+## Real-Data Application
 
-| Scenario | Dimension growth | `p` |
-|:--------:|:----------------:|-----|
-| **1** | `O(n^{1/2})` | `⌊4√n⌋ − 5` |
-| **2** | `O(n^{2/3})` | `⌊4n^{2/3}⌋ − 5` |
-
-with `n ∈ {200, 400, 800}`, `ρ ∈ {0, 0.5, 0.75}`, over 100 replications.
-
-**Metrics** — `MSE = (β̂−β*)ᵀ Σ (β̂−β*)`; `CZ` = correctly identified zeros; `IZ` = active coefficients wrongly set to zero.
-
-## 📈 Real-data application
-
-The eight estimators are compared on two benchmark datasets via repeated random train/test splits. With no ground-truth coefficients, performance is the out-of-sample **MSPE** (mean squared prediction error) and the average **model size** (number of selected variables). Tuning uses the **training fold only**.
-
-| Dataset | Source (R pkg) | `n` | `p` | Response |
-|---------|----------------|:---:|:---:|----------|
-| **cookie** (NIR spectroscopy) | `ppls` | 72 | 700 | fat content |
+| Dataset | Source | $n$ | $p$ | Response |
+|---------|--------|:---:|:---:|----------|
+| **cookie** (NIR) | `ppls` | 72 | 700 | fat content |
 | **diabetes** | `lars` | 442 | 10 | disease progression |
 
-> The cookie dough data carries four constituents (fat, sucrose, dry flour, water); `load_dataset("cookie", response=)` selects which one to model (default `"fat"`).
-
 ```bash
-Rscript run_realdata.R          # 100 splits, 70/30 train/test  ->  results/realdata_summary.csv
+Rscript run_realdata.R          # 100 splits, 70/30 train/test
 Rscript run_realdata.R 25       # quick: 25 splits
 ```
 
-> Swap in other datasets by editing `load_dataset()` in `R/realdata.R`.
+---
 
-## 🎯 Tuning
-
-The selection criterion is the standard regression BIC
+## Repository Layout
 
 ```
-BIC = n·log(RSS/n) + log(n)·df,        df = number of nonzero coefficients
+R/
+├── adaptive_go.R    coordinate descent, λ-path, BIC & CV tuning for Ad-GO / GO
+├── competitors.R    glmnet / ncvreg wrappers, BIC path selection, adaptive weights
+├── simulation.R     data generation, standardization, (CZ, IZ, MSE), shared fit core
+└── realdata.R       dataset loaders, train/test split evaluation (MSPE, model size)
+
+run_simulation.R     Tables 6.1 / 6.2   (Scenario 1 & 2)
+run_realdata.R       real-data application (cookie NIR + diabetes)
+run_timing.R         Table 6.4           (computation time vs p)
+make_boxplots.R      MSE boxplots        (Figures Boxplot1 / Boxplot2)
+tests/test_ago.R     self-checks for the coordinate-descent core
+install_deps.R       installs glmnet, ncvreg, pls, lars
+docs/figures/        figures embedded in this README
 ```
 
-(Wang et al. 2007) — the operational form of manuscript **Eq. (5.5)**. Written literally as `log(RSS) + log(n)·df` (without the `n` factor) the df penalty dominates the fit term and the null model is always selected, so the conventional `n`-scaled version is used; it gives the same ranking with sensible selection.
+---
 
-Each method is **also** tuned by **K-fold cross-validation**: `cv.glmnet` / `cv.ncvreg` (at `lambda.min`) for the glmnet/SCAD methods, and `ago_cv` over the `(λ₁, λ₂, κ)` grid for GO/Ad-GO. As expected, BIC yields sparser fits (higher CZ) and CV yields lower prediction error.
+## Tuning
 
-## 🔧 Reproducibility & knobs
+```
+BIC = n · log(RSS/n) + log(n) · df,    df = number of nonzero coefficients
+```
 
-`fit_methods_std()` / `fit_all()` (in `R/simulation.R`) expose the tuning grids and solver settings:
+(Wang et al. 2007 — operational form of Eq. 5.5). Each method is also tuned by K-fold CV: `cv.glmnet`/`cv.ncvreg` for glmnet/SCAD methods, `ago_cv` over the $(\lambda_1, \lambda_2, \kappa)$ grid for GO/Ad-GO.
 
-| Argument | Default | Meaning |
-|----------|---------|---------|
-| `l2seq` | `c(0, 0.01, 0.1, 1)` | candidate `λ₂` values |
-| `kapseq` | `c(0.3, 0.6, 0.9)` | candidate `κ` values |
-| `nl1` | `25` | number of `λ₁` grid points |
-| `nfolds` | `5` | CV folds for Ad-GO (CV) |
-| `enet_alpha` | `0.5` | ElasticNet mixing parameter |
-| `gamma` | `1` | adaptive-weight exponent |
-| `tol`, `maxit` | `1e-7`, `1000` | coordinate-descent convergence |
+---
 
-Replications run in parallel via `parallel::mclapply` (`run_config(..., ncores=)`, default: all-but-one core; serial on Windows; reproducible L'Ecuyer streams when a seed is given). Scenario 2 (`p` up to 339) is compute-heavy — lower `nreps`/`nl1` for a quick pass.
-
-## 📜 License
+## License
 
 [MIT](LICENSE) © 2026 R. K. Mishra
