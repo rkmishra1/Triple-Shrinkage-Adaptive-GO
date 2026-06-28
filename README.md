@@ -92,7 +92,7 @@ Crossed with $\rho \in \{0, 0.5, 0.75\}$, over 100 replications.
 |--------|---------|:---------:|
 | **CZ** | Correctly identified zeros | ↑ |
 | **IZ** | Active coefficients wrongly zeroed | ↓ |
-| **MSE** | $(\\hat\beta - \beta^*)^\top \Sigma (\hat\beta - \beta^*)$ | ↓ |
+| **MSE** | $(\hat\beta - \beta^{\star})^\top \Sigma (\hat\beta - \beta^{\star})$ | ↓ |
 
 ---
 
