@@ -175,4 +175,4 @@ BIC = n · log(RSS/n) + log(n) · df,    df = number of nonzero coefficients
 
 ## License
 
-[MIT](LICENSE) © 2026 R. K. Mishra
+[MIT](LICENSE) © 2026 R. K. Mishra, A. Mishra, G. Garg
