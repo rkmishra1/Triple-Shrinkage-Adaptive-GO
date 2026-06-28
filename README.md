@@ -31,7 +31,7 @@ The Ad-GO estimator combines **three shrinkage parameters** $(\lambda_1, \lambda
 
 For a standardized design the Ad-GO coordinate update is the soft-thresholding rule **(Eq. 5.4)**:
 
-$$\hat\beta_j = \frac{1}{1+\lambda_2} \cdot S\!\left((1+\kappa\lambda_{2})\,\beta_{j}^{ls},\; \lambda_{1} w_{j}\right), \qquad S(z,t) = \mathrm{sign}(z)\cdot(|z|-t)_{+}$$
+$$\hat\beta_j = \frac{1}{1+\lambda_2} \cdot S\left((1+\kappa\lambda_{2})\,\beta_{j}^{ls}, \lambda_{1} w_{j}\right), \qquad S(z,t) = \mathrm{sign}(z)\cdot(|z|-t)_{+}$$
 
 where $\beta_j^{ls}$ is the univariate LS coefficient of the partial residual on column $j$, and $\hat{w}_j = 1/|\hat\beta_j^{ init}|^\gamma$ are adaptive weights.
 
