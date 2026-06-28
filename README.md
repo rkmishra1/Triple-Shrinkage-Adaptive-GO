@@ -59,7 +59,7 @@ The three panels below illustrate how adding ridge shrinkage ($\lambda_2$) and a
 
 ## Triple-Shrinkage Tuning
 
-The three parameters $(\lambda_1, \lambda_2, \kappa)$ are selected jointly over a grid by BIC (or cross-validation). The BIC surface below shows the joint landscape over $(\lambda_1, \lambda_2)$ at a fixed $\kappa$, and the profile over $\kappa$ at the selected $(\lambda_1^*, \lambda_2^*)$.
+The three parameters $(\lambda_1, \lambda_2, \kappa)$ are selected jointly over a grid by BIC or cross-validation. The BIC surface below shows the joint landscape over $(\lambda_1, \lambda_2)$ at a fixed $\kappa$, and the profile over $\kappa$ at the selected $(\lambda_1^*, \lambda_2^*)$.
 
 <p align="center">
   <img src="docs/figures/tuning_surface.png" width="820" alt="Triple-shrinkage tuning surface"/>
