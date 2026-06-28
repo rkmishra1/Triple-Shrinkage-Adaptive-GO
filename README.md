@@ -40,9 +40,9 @@ where $\beta_j^{ls}$ is the univariate LS coefficient of the partial residual on
 | Symbol | Role |
 |:------:|------|
 | $\lambda_1$ | $\ell_1$ sparsity penalty |
-| $\lambda_2$ | ridge-type shrinkage toward $\kappa \cdot b^{\rm ls}$ |
+| $\lambda_2$ | ridge-type shrinkage toward $\kappa \cdot \beta^{ls}$ |
 | $\kappa$ | shrinkage target multiplier |
-| $w_j$ | adaptive weights; $\hat\beta^{\rm init}$ = OLS if $p<n$, ridge otherwise |
+| $w_j$ | adaptive weights; $\hat\beta^{init}$ = OLS if $p<n$, ridge otherwise |
 
 > Setting $w_j \equiv 1$ recovers the non-adaptive **GO** estimator.
 
