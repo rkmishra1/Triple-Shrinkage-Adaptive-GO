@@ -33,7 +33,7 @@ For a standardized design the Ad-GO coordinate update is the soft-thresholding r
 
 $$\hat\beta_j = \frac{1}{1+\lambda_2} \cdot S\!\left((1+\kappa\lambda_2)\,b_j^{\rm ls},\; \lambda_1 w_j\right), \qquad S(z,t) = \operatorname{sign}(z)\cdot(|z|-t)_+$$
 
-where $b_j^{\rm ls}$ is the univariate LS coefficient of the partial residual on column $j$, and $w_j = 1/|\hat\beta_j^{\rm init}|^\gamma$ are adaptive weights.
+where $\beta_j^{\rm ls}$ is the univariate LS coefficient of the partial residual on column $j$, and $w_j = 1/|\hat\beta_j^{\rm init}|^\gamma$ are adaptive weights.
 
 | Symbol | Role |
 |:------:|------|
